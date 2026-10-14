@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: manager_library
+      POSTGRES_USER: manager_library
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - library-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manager_library -d manager_library"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ../test-manager-library-3145555-api
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: ManagerLibrary
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?Set APP_KEY in infra/.env}
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: manager_library
+      DB_USERNAME: manager_library
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in infra/.env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in infra/.env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in infra/.env}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      COVERS_DIR: /var/www/html/storage/app/covers
+    ports:
+      - "8000:8000"
+    volumes:
+      - covers-data:/var/www/html/storage/app/covers
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - php
+        - -r
+        - '$$r=@file_get_contents("http://127.0.0.1:8000/health"); exit($$r === "{\"status\":\"ok\"}" ? 0 : 1);'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    build:
+      context: ../test-manager-library-3145555-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  library-data:
+  covers-data:
