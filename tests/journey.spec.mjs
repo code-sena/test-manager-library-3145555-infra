@@ -50,7 +50,15 @@ test('Real React Laravel PostgreSQL journey',async({page},info)=>{
   await page.getByRole('link',{name:'Reporte',exact:true}).click();
   const from=new Date(Date.now()-86400000).toISOString().slice(0,10),to=new Date(Date.now()+86400000).toISOString().slice(0,10);
   await page.getByLabel('Desde',{exact:true}).fill(from);await page.getByLabel('Hasta',{exact:true}).fill(to);
-  await page.getByRole('button',{name:'Consultar reporte'}).click();await expect(page.getByRole('cell',{name:title,exact:true})).toBeVisible();
+  const reportReady=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/reports/most-borrowed');
+  await page.getByRole('button',{name:'Consultar reporte'}).click();
+  const reportResponse=await reportReady;
+  console.log('::notice::Report HTTP status: '+reportResponse.status());
+  expect(reportResponse.status()).toBe(200);
+  const reportBody=await reportResponse.json();
+  console.log('::notice::Report row count: '+(Array.isArray(reportBody.rows)?reportBody.rows.length:0));
+  expect(reportBody.rows.some(row=>row.book_title===title)).toBe(true);
+  await expect(page.getByRole('cell',{name:title,exact:true})).toBeVisible();
 
   stage('librarian-account');
   await page.getByRole('link',{name:'Bibliotecarios',exact:true}).click();

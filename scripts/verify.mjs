@@ -16,6 +16,7 @@ function docker(args,extra={}){
   if(result.status!==0){
     const safe=(result.stdout||'').split('\n').filter(l=>l.startsWith('Integrated browser check')||l.startsWith('::error::'));
     for(const line of safe)console.log(line);
+    console.log('::error::Docker command failed with exit status: '+String(result.status));
     throw new Error();
   }
   return result.stdout;
@@ -46,10 +47,15 @@ try {
   const output=docker(['compose','--project-name',project,'-f','compose.yaml','-f','compose.test.yaml','--profile','verify','run','--build','--rm','--no-deps','browser']);
   for(const line of output.split('\n').filter(l=>l.startsWith('Integrated browser check')))console.log(line);
   const state=JSON.parse(readFileSync('artifacts/persistence.json','utf8'));
-  stage='persistent-recreation';docker([...compose,'down']);docker([...compose,'up','-d','--wait','--wait-timeout','180']);
+  stage='persistent-stop';docker([...compose,'down']);
+  stage='persistent-start';docker([...compose,'up','-d','--wait','--wait-timeout','180']);
+  stage='persisted-login';
   const refreshed=await login();
+  stage='persisted-book';
   const book=await http('/api/v1/books/'+state.book_id,undefined,refreshed);assert.equal(book.status,200);assert.equal(JSON.parse(book.bytes).available_copies,2);
+  stage='persisted-cover';
   const cover=await http('/api/v1/books/'+state.book_id+'/cover',undefined,refreshed);assert.equal(cover.status,200);assert.equal(cover.bytes.toString('base64'),state.cover);
+  stage='persisted-loan';
   const loan=await http('/api/v1/loans/'+state.loan_id,undefined,refreshed);assert.equal(JSON.parse(loan.bytes).status,'closed');
   console.log('Database records and private cover persisted across container recreation; fresh admin login succeeded.');
   console.log('Integrated deployment verification passed.');
