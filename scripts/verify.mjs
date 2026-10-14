@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 const values=Object.fromEntries(readFileSync('.env','utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('#')).map(l=>{const p=l.indexOf('=');return [l.slice(0,p),l.slice(p+1)];}));
 const env={...values,...process.env,TEST_PASSWORD:process.env.TEST_PASSWORD||randomBytes(24).toString('hex')};
 const project='library-check-'+Date.now()+'-'+randomBytes(4).toString('hex');
+env.IMAGE_TAG=project;
 const compose=['compose','--project-name',project];
 let stage='startup';let started=false;
 function docker(args,extra={}){

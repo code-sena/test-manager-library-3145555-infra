@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: valerysinai/test-manager-library-3145555-app
-          ref: a302d41b1a41babd3148c51fe96b4d6f6e7b8d18
+          ref: 47a517d0ebce8526d96e650d1ac9750338dcc8a4
           path: _sources/app
           persist-credentials: false
       - name: Generate disposable configuration and local CA
