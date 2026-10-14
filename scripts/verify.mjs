@@ -26,7 +26,7 @@ const ca=readFileSync(resolve(env.TLS_DIR||'.local/tls','root-ca.pem'));
 function http(path,body,token,trust=true){return new Promise((ok,fail)=>{
   const bytes=body===undefined?undefined:JSON.stringify(body);
   const headers={Accept:'application/json',...(bytes?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})};
-  const req=request(base+path,{method:bytes?'POST':'GET',headers,...(trust?{ca}:{}),rejectUnauthorized:true,timeout:15000},res=>{const chunks=[];res.on('data',b=>chunks.push(b));res.on('end',()=>ok({status:res.statusCode,bytes:Buffer.concat(chunks),type:res.headers['content-type']||''}));});
+  const req=request(base+path,{method:bytes?'POST':'GET',headers,...(trust?{ca}:{}),agent:false,rejectUnauthorized:true,timeout:15000},res=>{const chunks=[];res.on('data',b=>chunks.push(b));res.on('end',()=>ok({status:res.statusCode,bytes:Buffer.concat(chunks),type:res.headers['content-type']||''}));});
   req.on('error',()=>fail(new Error()));req.on('timeout',()=>req.destroy(new Error()));if(bytes)req.write(bytes);req.end();
 });}
 async function login(){const response=await http('/api/v1/auth/login',{username:env.ADMIN_USERNAME,password:env.ADMIN_PASSWORD});assert.equal(response.status,200);return JSON.parse(response.bytes).access_token;}

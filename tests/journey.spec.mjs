@@ -48,6 +48,7 @@ test('Real React Laravel PostgreSQL journey',async({page},info)=>{
 
   stage('report');
   await page.getByRole('link',{name:'Reporte',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Libros más prestados',exact:true})).toBeVisible();
   const from=new Date(Date.now()-86400000).toISOString().slice(0,10),to=new Date(Date.now()+86400000).toISOString().slice(0,10);
   await page.getByLabel('Desde',{exact:true}).fill(from);await page.getByLabel('Hasta',{exact:true}).fill(to);
   const reportReady=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/reports/most-borrowed');

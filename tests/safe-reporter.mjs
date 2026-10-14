@@ -1,4 +1,5 @@
 export default class SafeReporter {
+  onStdOut(chunk){for(const line of String(chunk).split('\n'))if(/^::notice::Report (HTTP status|row count): [0-9]+$/.test(line))console.log(line);}
   onTestEnd(test,result){
     const title=/^[A-Za-z0-9 -]+$/.test(test.title)?test.title:'journey';
     if(result.status==='passed'){console.log('Integrated browser check passed: '+title);return;}
