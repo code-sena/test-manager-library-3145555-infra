@@ -4,8 +4,9 @@ import {readFileSync} from 'node:fs';
 import {request} from 'node:https';
 import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
+import {parseEnv} from 'node:util';
 
-const values=Object.fromEntries(readFileSync('.env','utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('#')).map(l=>{const p=l.indexOf('=');return [l.slice(0,p),l.slice(p+1)];}));
+const values=parseEnv(readFileSync('.env','utf8'));
 const env={...values,...process.env,TEST_PASSWORD:process.env.TEST_PASSWORD||randomBytes(24).toString('hex')};
 const project='library-check-'+Date.now()+'-'+randomBytes(4).toString('hex');
 env.IMAGE_TAG=project;
@@ -14,7 +15,7 @@ let stage='startup';let started=false;
 function docker(args,extra={}){
   const result=spawnSync('docker',args,{env,encoding:'utf8',timeout:1200000,maxBuffer:16*1024*1024,...extra});
   if(result.status!==0){
-    const safe=(result.stdout||'').split('\n').filter(l=>l.startsWith('Integrated browser check')||l.startsWith('::error::'));
+    const safe=(result.stdout||'').split('\n').filter(l=>l.startsWith('Integrated browser check')||l.startsWith('::error::')||/^::notice::Report (HTTP status|row count): [0-9]+$/.test(l));
     for(const line of safe)console.log(line);
     console.log('::error::Docker command failed with exit status: '+String(result.status));
     throw new Error();
@@ -45,7 +46,7 @@ try {
   assert.equal((await http('/')).status,200);
   stage='integrated-browser';
   const output=docker(['compose','--project-name',project,'-f','compose.yaml','-f','compose.test.yaml','--profile','verify','run','--build','--rm','--no-deps','browser']);
-  for(const line of output.split('\n').filter(l=>l.startsWith('Integrated browser check')))console.log(line);
+  for(const line of output.split('\n').filter(l=>l.startsWith('Integrated browser check')||/^::notice::Report (HTTP status|row count): [0-9]+$/.test(l)))console.log(line);
   const state=JSON.parse(readFileSync('artifacts/persistence.json','utf8'));
   stage='persistent-stop';docker([...compose,'down']);
   stage='persistent-start';docker([...compose,'up','-d','--wait','--wait-timeout','180']);
